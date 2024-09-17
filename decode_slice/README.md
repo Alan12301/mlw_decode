@@ -44,4 +44,13 @@ int mlw_decode(MLWDecoder *decoder)
 * 結果:
 ![image](https://hackmd.io/_uploads/HkCm8ohhC.png)
 
-# 
+# 使用
+* 先編譯
+```
+gcc -o mlw_codec mlw_main.c mlw_encode.c mlw_decode.c -lm
+```
+
+* decode
+```
+./mlw_codec -d result.txt -o decode.txt
+```
