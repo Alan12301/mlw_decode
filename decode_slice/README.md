@@ -1,7 +1,8 @@
 # slice decode
 * 每次處理一個slice
 * 在main.c內使用迴圈運行
-* 有新設置的參數:int end_decode ... 
+* 有新設置的參數:int end_decode
+	* 負責在到達bitstream尾部時終止迴圈
 ```
 typedef struct {
 	int nvalues;    
