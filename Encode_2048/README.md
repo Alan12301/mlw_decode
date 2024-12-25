@@ -1,4 +1,26 @@
-# 分析學長給的mlw_codec:
+# 分割slice
+* **沒有找到可以明顯的slice開頭**
+* EOS & BYTEALIGN:  end of stream marker and align to 128bit
+    * 我原本以為eos是end of slice，可以由此去找slice結尾。但結果不是
+## 可能可行的方法
+* 在encode時，產生一個矩陣去儲存slice開頭的position
+* 更改encode的過程，再每個slice開頭的位置做特殊處理
+* 另一個方法是順著跑完全部的過程，但省略中間的計算部分，再紀錄slice開始位置
+![螢幕擷取畫面 2024-10-13 154620](https://hackmd.io/_uploads/SyRAcxF1Jl.png)
+![螢幕擷取畫面 2024-10-13 154605](https://hackmd.io/_uploads/HkzJolKJyg.png)
+
+* slice 內資料擺放方式
+    * 可以知道slice的長度是不固定的
+        * naury 1, remainder 
+![image](https://hackmd.io/_uploads/HyYFgC9kJg.png)
+
+* mlw_encode分割
+    * n_restart : section的數量
+    * n_w_slice : weight 模式每個section的slice數量
+![image](https://hackmd.io/_uploads/HJ5jx1ik1l.png)
+
+
+# 1223
 ## "Get weights" (or weight indicies) AND zero-runs from the input weight stream.
 * 計算tile_size = tile_i_size * tile_o_size;
     * tile_i_size
@@ -13,20 +35,9 @@
         * n_tile_weights
         * n_w_slice
 
-* tile_num = kernel_higth * kernel_width * tile_o_num * tile_i_num 
+* tile_num = kernel_height * kernel_width * tile_o_num * tile_i_num 
 * tile_size 最大為32 * 16，由input_channel, output_channel控制
-```
-tile_size ==> 2048 = 2^11
-Input size 5529 output size 4304 bpw 6.23
-// 
-START
-checking1: n= 5529
-n_tile_weights: 2048, n_w_slice: 1, total_w_bitcnt: 13307
-n_tile_weights: 2048, n_w_slice: 2, total_w_bitcnt: 25858
-n_tile_weights: 2048, n_w_slice: 3, total_w_bitcnt: 37361
-Input size 5529 output size 4720 bpw 6.83
 
-```
 ## Search for good "GRC parameters" for the "zrun" stream
 * 有使用zero run的話:
     * 未啟用tile_mode: get n_z_slice
@@ -53,3 +64,38 @@ Input size 5529 output size 4720 bpw 6.83
 * n_restarts直接設為1
     * 一個section only
 * find_palette的改變: 可能是因為只要一個section，所以不用考慮分段的position
+
+# encode_2048
+## 更改的地方:
+* tile number的控制改為為一個counter控制，當其記述到2048時才會新增一個tile。
+    * 因為我們不需要用到 convolution，所以我們不用設計如何控制kernel_height, kernel_width, input_channel, output_channel等變數
+    * 在main或使用時可以全部設為1即可
+* 當最後一個tile的weight數量不足2048時，我們會自動padding將後面的位置全部補零
+```
+tile_size ==> 2048 = 2^11
+// original encode
+Input size 5529 output size 4304 bpw 6.23
+// 2048 encode
+START
+checking1: n= 5529
+n_tile_weights: 2048, n_w_slice: 1, total_w_bitcnt: 13307
+n_tile_weights: 2048, n_w_slice: 2, total_w_bitcnt: 25858
+n_tile_weights: 2048, n_w_slice: 3, total_w_bitcnt: 37361
+Input size 5529 output size 4720 bpw 6.83
+
+```
+## 結果:
+![image](https://hackmd.io/_uploads/B1_rGB_HJl.png)
+```
+gcc -o mlw_codec mlw_main.c mlw_encode.c mlw_decode.c -lm
+caslab_bs@CASGPU3:~/Desktop/Alan/mlw_codec_test$ ./mlw_codec original.txt -o encoded.txt
+Input size 55078 output size 40976 bpw 5.95
+caslab_bs@CASGPU3:~/Desktop/Alan/mlw_codec_test$ ./mlw_codec -d encoded.txt -o test_2048.txt
+Input size 40976 output size 55296 bpw 5.93
+
+
+---
+
+55296/2048 = 27 ---correct
+```
+
