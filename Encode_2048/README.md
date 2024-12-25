@@ -1,26 +1,4 @@
-# 分割slice
-* **沒有找到可以明顯的slice開頭**
-* EOS & BYTEALIGN:  end of stream marker and align to 128bit
-    * 我原本以為eos是end of slice，可以由此去找slice結尾。但結果不是
-## 可能可行的方法
-* 在encode時，產生一個矩陣去儲存slice開頭的position
-* 更改encode的過程，再每個slice開頭的位置做特殊處理
-* 另一個方法是順著跑完全部的過程，但省略中間的計算部分，再紀錄slice開始位置
-![螢幕擷取畫面 2024-10-13 154620](https://hackmd.io/_uploads/SyRAcxF1Jl.png)
-![螢幕擷取畫面 2024-10-13 154605](https://hackmd.io/_uploads/HkzJolKJyg.png)
-
-* slice 內資料擺放方式
-    * 可以知道slice的長度是不固定的
-        * naury 1, remainder 
-![image](https://hackmd.io/_uploads/HyYFgC9kJg.png)
-
-* mlw_encode分割
-    * n_restart : section的數量
-    * n_w_slice : weight 模式每個section的slice數量
-![image](https://hackmd.io/_uploads/HJ5jx1ik1l.png)
-
-
-# 1223
+# 分析學長的 mlw_codec
 ## "Get weights" (or weight indicies) AND zero-runs from the input weight stream.
 * 計算tile_size = tile_i_size * tile_o_size;
     * tile_i_size
